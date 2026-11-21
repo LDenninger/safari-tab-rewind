@@ -186,7 +186,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
     }
 
     private func update() {
-        guard editor == nil, let pid = activeSafariPID, AXIsProcessTrusted() else {
+        guard let pid = activeSafariPID, AXIsProcessTrusted() else {
             unregister()
             hotKeyError = nil
             return
