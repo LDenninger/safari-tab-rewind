@@ -44,5 +44,5 @@ fi
 codesign "${signing_options[@]}" "$app"
 codesign --verify --strict --all-architectures "$app"
 for arch in "${architectures[@]}"; do
-    xcrun lipo -verify_arch "$arch" "$executable"
+    xcrun lipo "$executable" -verify_arch "$arch"
 done

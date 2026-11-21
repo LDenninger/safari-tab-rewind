@@ -79,7 +79,7 @@ ditto -c -k --sequesterRsrc --keepParent "$app" "$temporary/$archive"
 ditto -x -k "$temporary/$archive" "$temporary/extracted"
 codesign --verify --strict --all-architectures "$temporary/extracted/TabRewind.app"
 for arch in arm64 x86_64; do
-    xcrun lipo -verify_arch "$arch" "$temporary/extracted/TabRewind.app/Contents/MacOS/TabRewind"
+    xcrun lipo "$temporary/extracted/TabRewind.app/Contents/MacOS/TabRewind" -verify_arch "$arch"
 done
 mv "$temporary/$archive" "$output/$archive"
 (cd "$output" && shasum -a 256 "$archive" > "$archive.sha256")
