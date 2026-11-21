@@ -42,17 +42,8 @@ cleanup() {
 trap cleanup EXIT
 
 app="$staging/$app_name"
-mkdir -p "$app/Contents/MacOS" "$staging/previous"
-cp Info.plist "$app/Contents/Info.plist"
-
-deployment_target="arm64-apple-macos13.0"
-if [[ "$(uname -m)" == "x86_64" ]]; then
-    deployment_target="x86_64-apple-macos13.0"
-fi
-xcrun swiftc -swift-version 5 -target "$deployment_target" -O Sources/*.swift \
-    -o "$app/Contents/MacOS/TabRewind"
-codesign --force --sign - "$app"
-codesign --verify --strict "$app"
+mkdir -p "$staging/previous"
+scripts/build-app.sh "$app"
 
 for name in "$app_name" "$previous_name"; do
     if [[ -e "$applications/$name" ]]; then

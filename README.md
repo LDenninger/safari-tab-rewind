@@ -4,7 +4,9 @@ Press **Control–Tab** to jump to the last-used open tab in the current Safari 
 
 ## Install
 
-On a Mac with the Xcode Command Line Tools, run:
+Download the universal app from [GitHub Releases](https://github.com/LDenninger/safari-tab-rewind/releases/latest).
+
+To build from source on a Mac with the Xcode Command Line Tools, run:
 
 ```sh
 git clone https://github.com/LDenninger/safari-tab-rewind.git
