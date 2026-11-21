@@ -151,9 +151,9 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
     private func setupMenu() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.isVisible = UserDefaults.standard.bool(forKey: "showMenuBarIcon")
-        let icon = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: "Safari Tab Recall")
+        let icon = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: "TabRewind")
         statusItem.button?.image = icon
-        statusItem.button?.toolTip = "Safari Tab Recall"
+        statusItem.button?.toolTip = "TabRewind"
 
         let menu = NSMenu()
         menu.delegate = self
@@ -167,7 +167,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
         loginItem = menu.addItem(withTitle: "Start at Login", action: #selector(toggleLogin), keyEquivalent: "")
         loginItem.target = self
         menu.addItem(.separator())
-        let quitItem = menu.addItem(withTitle: "Quit Safari Tab Recall", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
+        let quitItem = menu.addItem(withTitle: "Quit TabRewind", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         quitItem.target = NSApp
         statusItem.menu = menu
         menuWillOpen(menu)
@@ -252,7 +252,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
         unregister()
         let window = ShortcutWindow(contentRect: NSRect(x: 0, y: 0, width: 375, height: 255),
                                     styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "Safari Tab Recall Settings"
+        window.title = "TabRewind Settings"
         window.isReleasedWhenClosed = false
         window.delegate = self
 
@@ -271,7 +271,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         let permission = NSButton(title: "Grant Accessibility…", target: self, action: #selector(openAccessibility))
         permission.isHidden = AXIsProcessTrusted()
-        let quit = NSButton(title: "Quit Safari Tab Recall", target: NSApp, action: #selector(NSApplication.terminate(_:)))
+        let quit = NSButton(title: "Quit TabRewind", target: NSApp, action: #selector(NSApplication.terminate(_:)))
         let shortcutButtons = NSStackView(views: [save, reset])
         let windowButtons = NSStackView(views: [close, quit])
         let content = NSStackView(views: [prompt, label, shortcutButtons, menuBar, login, permission, windowButtons])
