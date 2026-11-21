@@ -23,7 +23,7 @@ codesign --verify --strict "$app"
 destination="$applications/$app_name"
 if [[ -d "$destination" ]]; then
     if /usr/bin/pgrep -x SafariTabRecall >/dev/null; then
-        printf '%s\n' 'Quit Safari Tab Recall from its menu bar icon before reinstalling.' >&2
+        printf '%s\n' 'Open Safari Tab Recall again to show settings, then quit before reinstalling.' >&2
         exit 1
     fi
     mv "$destination" "$staging/Previous.app"

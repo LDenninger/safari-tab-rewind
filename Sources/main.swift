@@ -95,6 +95,10 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
     private var shortcutItem: NSMenuItem!
     private var loginItem: NSMenuItem!
     private var editor: ShortcutWindow?
+    private weak var permissionButton: NSButton?
+    private weak var loginCheckbox: NSButton?
+    private weak var shortcutLabel: NSTextField?
+    private weak var saveButton: NSButton?
     private var pendingShortcut: Shortcut?
     private var hotKeyError: OSStatus?
 
@@ -134,8 +138,19 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
         if let handler { RemoveEventHandler(handler) }
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        editShortcut()
+        return false
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        permissionButton?.isHidden = AXIsProcessTrusted()
+        loginCheckbox?.state = SMAppService.mainApp.status == .enabled ? .on : .off
+    }
+
     private func setupMenu() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.isVisible = UserDefaults.standard.bool(forKey: "showMenuBarIcon")
         let icon = NSImage(systemSymbolName: "arrow.uturn.backward", accessibilityDescription: "Safari Tab Recall")
         statusItem.button?.image = icon
         statusItem.button?.toolTip = "Safari Tab Recall"
@@ -160,7 +175,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
 
     func menuWillOpen(_ menu: NSMenu) {
         permissionItem.isHidden = AXIsProcessTrusted()
-        shortcutItem.title = "Change Shortcut (\(shortcut.label))…"
+        shortcutItem.title = "Settings (\(shortcut.label))…"
         loginItem.state = SMAppService.mainApp.status == .enabled ? .on : .off
     }
 
@@ -231,12 +246,13 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
     @objc private func editShortcut() {
         if let editor {
             editor.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
             return
         }
         unregister()
-        let window = ShortcutWindow(contentRect: NSRect(x: 0, y: 0, width: 350, height: 145),
+        let window = ShortcutWindow(contentRect: NSRect(x: 0, y: 0, width: 375, height: 255),
                                     styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "Safari Tab Recall Shortcut"
+        window.title = "Safari Tab Recall Settings"
         window.isReleasedWhenClosed = false
         window.delegate = self
 
@@ -246,15 +262,36 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
         let save = NSButton(title: "Save", target: self, action: #selector(saveShortcut))
         save.keyEquivalent = "\r"
         save.isEnabled = false
-        let cancel = NSButton(title: "Cancel", target: self, action: #selector(closeEditor))
-        cancel.keyEquivalent = "\u{1b}"
-        let buttons = NSStackView(views: [cancel, save])
-        let content = NSStackView(views: [prompt, label, buttons])
+        let close = NSButton(title: "Close", target: self, action: #selector(closeEditor))
+        close.keyEquivalent = "\u{1b}"
+        let reset = NSButton(title: "Reset Shortcut", target: self, action: #selector(resetShortcut))
+        let menuBar = NSButton(checkboxWithTitle: "Show in Menu Bar", target: self, action: #selector(toggleMenuBar(_:)))
+        menuBar.state = statusItem.isVisible ? .on : .off
+        let login = NSButton(checkboxWithTitle: "Start at Login", target: self, action: #selector(toggleLogin))
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        let permission = NSButton(title: "Grant Accessibility…", target: self, action: #selector(openAccessibility))
+        permission.isHidden = AXIsProcessTrusted()
+        let quit = NSButton(title: "Quit Safari Tab Recall", target: NSApp, action: #selector(NSApplication.terminate(_:)))
+        let shortcutButtons = NSStackView(views: [save, reset])
+        let windowButtons = NSStackView(views: [close, quit])
+        let content = NSStackView(views: [prompt, label, shortcutButtons, menuBar, login, permission, windowButtons])
         content.orientation = .vertical
         content.alignment = .leading
-        content.spacing = 12
-        content.edgeInsets = NSEdgeInsets(top: 18, left: 20, bottom: 18, right: 20)
-        window.contentView = content
+        content.spacing = 10
+        content.translatesAutoresizingMaskIntoConstraints = false
+        let container = NSView()
+        container.addSubview(content)
+        NSLayoutConstraint.activate([
+            content.topAnchor.constraint(equalTo: container.topAnchor, constant: 18),
+            content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
+            content.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
+            content.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor, constant: -18)
+        ])
+        window.contentView = container
+        shortcutLabel = label
+        saveButton = save
+        permissionButton = permission
+        loginCheckbox = login
         window.record = { [weak self] value in
             self?.pendingShortcut = value
             label.stringValue = value.label
@@ -284,6 +321,15 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
 
     @objc private func resetShortcut() {
         apply(.standard)
+        pendingShortcut = nil
+        shortcutLabel?.stringValue = shortcut.label
+        saveButton?.isEnabled = false
+    }
+
+    @objc private func toggleMenuBar(_ checkbox: NSButton) {
+        let visible = checkbox.state == .on
+        statusItem.isVisible = visible
+        UserDefaults.standard.set(visible, forKey: "showMenuBarIcon")
     }
 
     private func apply(_ candidate: Shortcut) {
@@ -321,6 +367,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
         } catch {
             showMessage("Couldn’t change Start at Login", detail: error.localizedDescription)
         }
+        loginCheckbox?.state = SMAppService.mainApp.status == .enabled ? .on : .off
         update()
     }
 
