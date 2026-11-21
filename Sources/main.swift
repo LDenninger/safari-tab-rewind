@@ -68,19 +68,6 @@ struct Shortcut: Equatable {
     }
 }
 
-private final class ShortcutWindow: NSWindow {
-    var record: ((Shortcut) -> Void)?
-
-    override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown,
-           !event.modifierFlags.intersection([.control, .option, .command]).isEmpty {
-            if let shortcut = Shortcut(event: event) { record?(shortcut) }
-            return
-        }
-        super.sendEvent(event)
-    }
-}
-
 final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
     private let tabs = SafariTabs()
     private var shortcut = Shortcut.load()
@@ -94,12 +81,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
     private var permissionItem: NSMenuItem!
     private var shortcutItem: NSMenuItem!
     private var loginItem: NSMenuItem!
-    private var editor: ShortcutWindow?
-    private weak var permissionButton: NSButton?
-    private weak var loginCheckbox: NSButton?
-    private weak var shortcutLabel: NSTextField?
-    private weak var saveButton: NSButton?
-    private var pendingShortcut: Shortcut?
+    private var settingsWindow: SettingsWindow?
     private var hotKeyError: OSStatus?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -139,13 +121,12 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        editShortcut()
+        openSettings()
         return false
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
-        permissionButton?.isHidden = AXIsProcessTrusted()
-        loginCheckbox?.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        refreshSettings()
     }
 
     private func setupMenu() {
@@ -160,7 +141,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
         menu.autoenablesItems = false
         permissionItem = menu.addItem(withTitle: "Grant Accessibility…", action: #selector(openAccessibility), keyEquivalent: "")
         permissionItem.target = self
-        shortcutItem = menu.addItem(withTitle: "", action: #selector(editShortcut), keyEquivalent: "")
+        shortcutItem = menu.addItem(withTitle: "", action: #selector(openSettings), keyEquivalent: "")
         shortcutItem.target = self
         let resetItem = menu.addItem(withTitle: "Reset Shortcut", action: #selector(resetShortcut), keyEquivalent: "")
         resetItem.target = self
@@ -243,106 +224,61 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
         return noErr
     }
 
-    @objc private func editShortcut() {
-        if let editor {
-            editor.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
+    @objc private func openSettings() {
+        if settingsWindow == nil {
+            let window = SettingsWindow(
+                saveShortcut: { [weak self] in self?.apply($0) ?? false },
+                setMenuBarVisibility: { [weak self] in self?.setMenuBarVisibility($0) },
+                setStartAtLogin: { [weak self] in self?.setStartAtLogin($0) },
+                openAccessibility: { [weak self] in self?.openAccessibility() }
+            )
+            window.delegate = self
+            settingsWindow = window
+            refreshSettings()
+            window.center()
         }
-        unregister()
-        let window = ShortcutWindow(contentRect: NSRect(x: 0, y: 0, width: 375, height: 255),
-                                    styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "TabRewind Settings"
-        window.isReleasedWhenClosed = false
-        window.delegate = self
-
-        let prompt = NSTextField(wrappingLabelWithString: "Press a shortcut that includes Control, Option, or Command.")
-        let label = NSTextField(labelWithString: shortcut.label)
-        label.font = .monospacedSystemFont(ofSize: 17, weight: .medium)
-        let save = NSButton(title: "Save", target: self, action: #selector(saveShortcut))
-        save.keyEquivalent = "\r"
-        save.isEnabled = false
-        let close = NSButton(title: "Close", target: self, action: #selector(closeEditor))
-        close.keyEquivalent = "\u{1b}"
-        let reset = NSButton(title: "Reset Shortcut", target: self, action: #selector(resetShortcut))
-        let menuBar = NSButton(checkboxWithTitle: "Show in Menu Bar", target: self, action: #selector(toggleMenuBar(_:)))
-        menuBar.state = statusItem.isVisible ? .on : .off
-        let login = NSButton(checkboxWithTitle: "Start at Login", target: self, action: #selector(toggleLogin))
-        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-        let permission = NSButton(title: "Grant Accessibility…", target: self, action: #selector(openAccessibility))
-        permission.isHidden = AXIsProcessTrusted()
-        let quit = NSButton(title: "Quit TabRewind", target: NSApp, action: #selector(NSApplication.terminate(_:)))
-        let shortcutButtons = NSStackView(views: [save, reset])
-        let windowButtons = NSStackView(views: [close, quit])
-        let content = NSStackView(views: [prompt, label, shortcutButtons, menuBar, login, permission, windowButtons])
-        content.orientation = .vertical
-        content.alignment = .leading
-        content.spacing = 10
-        content.translatesAutoresizingMaskIntoConstraints = false
-        let container = NSView()
-        container.addSubview(content)
-        NSLayoutConstraint.activate([
-            content.topAnchor.constraint(equalTo: container.topAnchor, constant: 18),
-            content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
-            content.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
-            content.bottomAnchor.constraint(lessThanOrEqualTo: container.bottomAnchor, constant: -18)
-        ])
-        window.contentView = container
-        shortcutLabel = label
-        saveButton = save
-        permissionButton = permission
-        loginCheckbox = login
-        window.record = { [weak self] value in
-            self?.pendingShortcut = value
-            label.stringValue = value.label
-            save.isEnabled = true
-        }
-        editor = window
-        window.center()
-        window.makeKeyAndOrderFront(nil)
+        settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    @objc private func saveShortcut() {
-        guard let pendingShortcut else { return }
-        apply(pendingShortcut)
-        closeEditor()
-    }
-
-    @objc private func closeEditor() {
-        editor?.close()
+    private func refreshSettings() {
+        settingsWindow?.refresh(
+            shortcut: shortcut,
+            showMenuBar: statusItem.isVisible,
+            startAtLogin: SMAppService.mainApp.status == .enabled,
+            accessibilityGranted: AXIsProcessTrusted()
+        )
     }
 
     func windowWillClose(_ notification: Notification) {
-        editor = nil
-        pendingShortcut = nil
+        settingsWindow = nil
         update()
     }
 
     @objc private func resetShortcut() {
-        apply(.standard)
-        pendingShortcut = nil
-        shortcutLabel?.stringValue = shortcut.label
-        saveButton?.isEnabled = false
+        if !apply(.standard) {
+            showMessage("Shortcut unavailable", detail: "macOS rejected the default shortcut.")
+        }
     }
 
-    @objc private func toggleMenuBar(_ checkbox: NSButton) {
-        let visible = checkbox.state == .on
+    private func setMenuBarVisibility(_ visible: Bool) {
         statusItem.isVisible = visible
         UserDefaults.standard.set(visible, forKey: "showMenuBarIcon")
+        refreshSettings()
     }
 
-    private func apply(_ candidate: Shortcut) {
+    private func apply(_ candidate: Shortcut) -> Bool {
         unregister()
-        if register(candidate) != nil {
-            showMessage("Shortcut unavailable", detail: "macOS rejected this shortcut. Choose a different combination.")
-        } else {
+        let registered = register(candidate) == nil
+        if registered {
             shortcut = candidate
             shortcut.save()
         }
         unregister()
         hotKeyError = nil
+        refreshSettings()
         update()
+        return registered
     }
 
     private func requestAccessibility() {
@@ -358,16 +294,20 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
     }
 
     @objc private func toggleLogin() {
+        setStartAtLogin(SMAppService.mainApp.status != .enabled)
+    }
+
+    private func setStartAtLogin(_ enabled: Bool) {
         do {
-            if SMAppService.mainApp.status == .enabled {
-                try SMAppService.mainApp.unregister()
-            } else {
+            if enabled {
                 try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
             }
         } catch {
             showMessage("Couldn’t change Start at Login", detail: error.localizedDescription)
         }
-        loginCheckbox?.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        refreshSettings()
         update()
     }
 

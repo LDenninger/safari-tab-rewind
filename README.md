@@ -25,11 +25,11 @@ If macOS asks, enable **TabRewind** in **System Settings → Privacy & Security 
 
 Reopen **TabRewind** from Finder or Spotlight while it is running to show its settings. The menu bar icon is hidden by default. Turn on **Show in Menu Bar** if you want quick access there.
 
-To change the shortcut, press the combination you want to use and click **Save**. The combination needs Control, Option, or Command. **Reset Shortcut** restores Control–Tab. **Start at Login** is optional.
+Click the current shortcut and press a new combination to change it. Include Control, Option, or Command. Press **Escape** to cancel, or click **Restore Default** to return to Control–Tab. **Start at Login** is optional.
 
 ## How it works
 
-The app registers the shortcut with macOS while Safari is active. It uses Safari's accessibility tab controls to remember selected tabs in each window. Tabs that haven't been visited since the app started come after the known tabs, in tab-bar order. The history starts fresh when the app is relaunched. It stores accessibility element references in memory and saves the shortcut locally. It has no network access code and reads no page content.
+The app registers the shortcut with macOS while Safari is active. Each Safari window has its own recent-tab history. The shortcut cycles through tabs in the active window using Safari's accessibility controls. Tabs that haven't been visited since the app started come after the known tabs, in tab-bar order. The history starts fresh when the app is relaunched. It stores accessibility element references in memory and saves the shortcut locally. It has no network access code and reads no page content.
 
 A native helper lets Control–Tab work from browser chrome as well as from webpages. Safari's extension commands and page scripts do not provide the same browser-wide shortcut. The helper relies on Safari's accessibility hierarchy, which can change between Safari versions.
 
