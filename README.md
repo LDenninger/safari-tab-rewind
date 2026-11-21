@@ -1,6 +1,9 @@
-# TabRewind
+![TabRewind](assets/tabrewind.svg)
 
-Press **Control–Tab** to jump to the last-used open tab in the current Safari window. Keep holding **Control** and tap **Tab** to keep moving through the tabs in most-recently-used order. Each step switches immediately without an overlay. Release Control to finish and make the selected tab the most recently used.
+**Simple Problem:** We want to walk through tabs based on their recency not order in the tab bar (An option common to most browser)
+
+**Even simpler solution:** Just do it.
+
 
 ## Install
 
