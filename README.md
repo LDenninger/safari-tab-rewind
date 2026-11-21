@@ -1,8 +1,8 @@
 ![TabRewind](assets/tabrewind.svg)
 
-**Simple Problem:** We want to walk through tabs based on their recency not order in the tab bar (An option common to most browser)
+**Simple problem.** Safari’s **Control-Tab** moves to the next tab in the bar. Getting back to the tab you just used should be just as easy.
 
-**Even simpler solution:** Just do it.
+**Even simpler solution.** Press **Control-Tab** to jump to your last-used tab. Keep holding **Control** and tap **Tab** to cycle through the rest in order of recent use.
 
 
 ## Install
