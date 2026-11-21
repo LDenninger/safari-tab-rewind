@@ -11,6 +11,16 @@ struct Shortcut: Equatable {
     let label: String
 
     static let standard = Shortcut(key: UInt32(kVK_Tab), modifiers: UInt32(controlKey), label: "⌃⇥")
+    private static let modifierKeys: [(NSEvent.ModifierFlags, Int, String)] = [
+        (.control, controlKey, "⌃"), (.option, optionKey, "⌥"),
+        (.shift, shiftKey, "⇧"), (.command, cmdKey, "⌘")
+    ]
+
+    var modifierFlags: NSEvent.ModifierFlags {
+        Self.modifierKeys.reduce(into: []) { flags, key in
+            if modifiers & UInt32(key.1) != 0 { flags.insert(key.0) }
+        }
+    }
 
     init(key: UInt32, modifiers: UInt32, label: String) {
         self.key = key
@@ -39,11 +49,7 @@ struct Shortcut: Equatable {
             return nil
         }
 
-        let keys: [(NSEvent.ModifierFlags, Int, String)] = [
-            (.control, controlKey, "⌃"), (.option, optionKey, "⌥"),
-            (.shift, shiftKey, "⇧"), (.command, cmdKey, "⌘")
-        ]
-        let active = keys.filter { flags.contains($0.0) }
+        let active = Self.modifierKeys.filter { flags.contains($0.0) }
         key = UInt32(event.keyCode)
         modifiers = active.reduce(0) { $0 | UInt32($1.1) }
         label = active.map { $0.2 }.joined() + keyLabel
@@ -83,6 +89,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
     private var handler: EventHandlerRef?
     private var timer: Timer?
     private var workspaceObserver: NSObjectProtocol?
+    private var modifierMonitor: Any?
     private var statusItem: NSStatusItem!
     private var permissionItem: NSMenuItem!
     private var shortcutItem: NSMenuItem!
@@ -172,8 +179,18 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
         if handler != nil, hotKey == nil, hotKeyError == nil {
             hotKeyError = register(shortcut)
             shortcutItem.toolTip = hotKeyError == nil ? nil : "This shortcut is unavailable. Choose another."
+            if hotKey != nil {
+                modifierMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+                    self?.finishCycleIfReleased(event.modifierFlags)
+                }
+            }
         }
+        finishCycleIfReleased(NSEvent.modifierFlags)
         tabs.refresh(for: pid)
+    }
+
+    private func finishCycleIfReleased(_ flags: NSEvent.ModifierFlags) {
+        if !flags.contains(shortcut.modifierFlags) { tabs.finishCycle() }
     }
 
     private func register(_ value: Shortcut) -> OSStatus? {
@@ -188,6 +205,11 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
             UnregisterEventHotKey(hotKey)
             self.hotKey = nil
         }
+        if let modifierMonitor {
+            NSEvent.removeMonitor(modifierMonitor)
+            self.modifierMonitor = nil
+        }
+        tabs.finishCycle()
         keyHeld = false
     }
 
@@ -201,7 +223,7 @@ final class App: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelega
             keyHeld = false
         } else if !keyHeld, let pid = activeSafariPID {
             keyHeld = true
-            tabs.switchBack(in: pid)
+            tabs.advance(in: pid)
         }
         return noErr
     }

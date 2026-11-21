@@ -1,6 +1,6 @@
 # Safari Tab Recall
 
-Press **Control–Tab** to jump to the last-used open tab in the current Safari window. Press it again to switch back. The shortcut works on key down and opens no picker, overlay, or preview.
+Press **Control–Tab** to jump to the last-used open tab in the current Safari window. Keep holding **Control** and tap **Tab** to keep moving through the tabs in most-recently-used order. Each step switches immediately without an overlay. Release Control to finish and make the selected tab the most recently used.
 
 ## Install
 
@@ -22,12 +22,12 @@ Open the Safari Tab Recall menu bar icon and choose **Change Shortcut**. Press t
 
 ## How it works
 
-The app registers the shortcut with macOS while Safari is active. It uses Safari's accessibility tab controls to remember selected tabs in each window and activate the previous open tab. The history starts fresh when the app is relaunched. It stores accessibility element references in memory and saves the shortcut locally. It has no network access code and reads no page content.
+The app registers the shortcut with macOS while Safari is active. It uses Safari's accessibility tab controls to remember selected tabs in each window. Tabs that haven't been visited since the app started come after the known tabs, in tab-bar order. The history starts fresh when the app is relaunched. It stores accessibility element references in memory and saves the shortcut locally. It has no network access code and reads no page content.
 
 A native helper lets Control–Tab work from browser chrome as well as from webpages. Safari's extension commands and page scripts do not provide the same browser-wide shortcut. The helper relies on Safari's accessibility hierarchy, which can change between Safari versions.
 
 ## Update or remove
 
-To update, quit from the menu bar, pull the latest source, and run `./install.sh` again. macOS may ask for Accessibility permission again after a rebuild.
+To update, quit from the menu bar, pull the latest source, and run `./install.sh` again. If **Grant Accessibility…** still appears after rebuilding, remove the old entry in the Accessibility permissions list and add the rebuilt app from `~/Applications`.
 
 To remove, turn off **Start at Login** if enabled, quit Safari Tab Recall, and move `~/Applications/Safari Tab Recall.app` to the Trash.
