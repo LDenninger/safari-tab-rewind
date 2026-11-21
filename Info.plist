@@ -8,6 +8,8 @@
     <string>TabRewind</string>
     <key>CFBundleExecutable</key>
     <string>TabRewind</string>
+    <key>CFBundleIconFile</key>
+    <string>TabRewind.icns</string>
     <key>CFBundleIdentifier</key>
     <string>io.github.ldenninger.safari-tab-recall</string>
     <key>CFBundleInfoDictionaryVersion</key>

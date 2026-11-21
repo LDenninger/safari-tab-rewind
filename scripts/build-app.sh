@@ -26,8 +26,9 @@ for arch in "${architectures[@]}"; do
 done
 
 executable="$app/Contents/MacOS/TabRewind"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp Info.plist "$app/Contents/Info.plist"
+cp assets/TabRewind.icns "$app/Contents/Resources/"
 if [[ "$architecture" == universal ]]; then
     xcrun lipo -create "${binaries[@]}" -output "$executable"
 else
