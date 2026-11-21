@@ -1,0 +1,33 @@
+# Safari Tab Recall
+
+Press **Control–Tab** to jump to the last-used open tab in the current Safari window. Press it again to switch back. The shortcut works on key down and opens no picker, overlay, or preview.
+
+## Install
+
+On a Mac with the Xcode Command Line Tools, run:
+
+```sh
+git clone https://github.com/LDenninger/safari-tab-recall.git
+cd safari-tab-recall
+./install.sh
+```
+
+The script builds and locally signs the app, installs it in `~/Applications`, and opens it. The app targets macOS 13 and newer. Its browser integration was tested on Safari 27.
+
+If macOS asks, enable **Safari Tab Recall** in **System Settings → Privacy & Security → Accessibility**. The menu bar item also has a **Grant Accessibility…** action when permission is needed.
+
+## Change the shortcut
+
+Open the Safari Tab Recall menu bar icon and choose **Change Shortcut**. Press the combination you want to use and click **Save**. The combination needs Control, Option, or Command. **Reset Shortcut** restores Control–Tab. **Start at Login** is optional.
+
+## How it works
+
+The app registers the shortcut with macOS while Safari is active. It uses Safari's accessibility tab controls to remember selected tabs in each window and activate the previous open tab. The history starts fresh when the app is relaunched. It stores accessibility element references in memory and saves the shortcut locally. It has no network access code and reads no page content.
+
+A native helper lets Control–Tab work from browser chrome as well as from webpages. Safari's extension commands and page scripts do not provide the same browser-wide shortcut. The helper relies on Safari's accessibility hierarchy, which can change between Safari versions.
+
+## Update or remove
+
+To update, quit from the menu bar, pull the latest source, and run `./install.sh` again. macOS may ask for Accessibility permission again after a rebuild.
+
+To remove, turn off **Start at Login** if enabled, quit Safari Tab Recall, and move `~/Applications/Safari Tab Recall.app` to the Trash.
